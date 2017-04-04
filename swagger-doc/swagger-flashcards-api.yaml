@@ -1,0 +1,2272 @@
+# Example YAML to get you started quickly.
+# Be aware that YAML has indentation based scoping.
+# Code completion support is available so start typing for available options.
+swagger: '2.0'
+host: 134.60.51.194:9000
+# This is your document metadata
+info:
+  version: "1.0.0"
+  title: Flashcards API
+
+
+
+# Describe your paths here
+paths:
+  # --- Generic ---
+  /heartbeat:
+    get:
+      summary: Returns the curent server time - acts as a means to check if the server is online
+      operationId: getHeartbeat
+      tags:
+        - util
+      parameters:
+          - name: Authorization
+            in: header
+            required: true
+            description: Requires authentication via header "Authorization":"Bearer {{token}}"
+            type: string
+      responses:
+        "200":
+          description: "Current Date"
+          schema:
+            $ref: "#/definitions/HeartbeatResponse"
+
+
+  /login:
+    post:
+      summary: Login with password and username, retrieve a new token for the current user
+      operationId: loginUserResponse
+      tags:
+        - util
+        - authorization
+      parameters:
+          - name: loginRequest
+            in: body
+            required: true
+            description: Requires a valid password and email of the user to login
+            schema:
+              $ref: '#/definitions/LoginRequest'
+      responses:
+        "200":
+          description: "Response contains one new Token to use for further requests"
+          schema:
+              $ref: '#/definitions/LoginResponse'
+
+  /auth:
+    get:
+      summary: Returns the email of the logged in user if a valid token is provided
+      operationId: getEmailViaToken
+      tags:
+        - util
+        - authorization
+      responses:
+        "200":
+          description: "Email from the token owner"
+          schema:
+            type: string
+
+
+  /logout:
+    post:
+      summary: "Invalidates the currently sent token"
+      operationId: logoutViaToken
+      parameters:
+          - name: Authorization
+            in: header
+            required: true
+            description: Requires authentication via header "Authorization":"Bearer {{token}}"
+            type: string
+      tags:
+        - util
+        - authorization
+      responses:
+        "204":
+          description: token has been deleted
+        "401":
+            description: Request sent without a (valid) "Bearer_Token"
+            schema:
+              $ref: '#/definitions/UnauthorizedResponse'
+
+  /upload:
+    post:
+      summary: "Upload media onto the current server"
+      operationId: uploadMedia
+      tags:
+        - util
+        - authorization
+      consumes:
+        - multipart/form-data
+      parameters:
+        - name: picture
+          in: formData
+          description: file to upload
+          required: false
+          type: file
+        - name: Authorization
+          in: header
+          required: true
+          description: Requires authentication via header "Authorization":"Bearer {{token}}"
+          type: string
+      responses:
+        "200":
+          description: "ok"
+          schema:
+            $ref: '#/definitions/UploadedMediaResponse'
+        "401":
+            description: Request sent without a (valid) "Bearer_Token"
+            schema:
+              $ref: '#/definitions/UnauthorizedResponse'
+
+  # --- Users ---
+  /users:
+    get:
+      summary: List users
+      operationId: listUsers
+      tags:
+        - users
+      parameters:
+        - name: id
+          in: query
+          description: Loads all card specified by the ids (/users?id=x&id=y&...)
+          required: false
+          type: integer
+
+      responses:
+        "200":
+          description: A list of users
+          schema:
+            $ref: '#/definitions/UserResponseList'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+    post:
+      description: Creates a new User. Email is unique
+      operationId: addUser
+      tags:
+        - users
+      parameters:
+        - name: user
+          in: body
+          description: user object
+          required: true
+          schema:
+            $ref: '#/definitions/UserRequest'
+      responses:
+        "200":
+          description: Success Message
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "400":
+          description: User input is not valid - description message contains more info.
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "403":
+          description: Problems with the used password util. Should not happen.
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+  /users/{userId}:
+    get:
+      summary: Info for a specific user
+      operationId: showUserById
+      tags:
+        - users
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: The id of the user to change
+          type: string
+      responses:
+        "200":
+          description: Expected response to a valid request
+          schema:
+            $ref: '#/definitions/UserResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+    put:
+        summary: Completely modify one user
+        operationId: putUserById
+        tags:
+          - users
+          - authorization
+        parameters:
+          - name: Authorization
+            in: header
+            required: true
+            description: Requires authentication via header "Authorization":"Bearer {{token}}"
+            type: string
+          - name: userId
+            in: path
+            required: true
+            description: The id of the user to modify completely
+            type: string
+          - name: user
+            in: body
+            description: user object
+            required: true
+            schema:
+              $ref: '#/definitions/PutUser'
+        responses:
+          "200":
+            description: Success Message
+            schema:
+              $ref: '#/definitions/GenericResponse'
+          "400":
+            description: User input is not valid - description message contains more info.
+            schema:
+              $ref: '#/definitions/GenericResponse'
+          "403":
+            description: Problems with the used password util. Should not happen.
+            schema:
+              $ref: '#/definitions/GenericResponse'
+          "404":
+              description: User not found
+              schema:
+                $ref: '#/definitions/GenericResponse'
+
+    patch:
+          summary: Patch one specific user
+          operationId: patchUserById
+          tags:
+            - users
+            - authorization
+          parameters:
+            - name: Authorization
+              in: header
+              required: true
+              description: Requires authentication via header "Authorization":"Bearer {{token}}"
+              type: string
+            - name: userId
+              in: path
+              required: true
+              description: The id of the user to modify partially
+              type: string
+            - name: user
+              in: body
+              description: user object
+              required: true
+              schema:
+                $ref: '#/definitions/PutUser'
+          responses:
+            "200":
+              description: Success Message
+              schema:
+                $ref: '#/definitions/GenericResponse'
+            "400":
+              description: User input is not valid - description message contains more info.
+              schema:
+                $ref: '#/definitions/GenericResponse'
+            "401":
+              description: Request sent without a (valid) "Bearer_Token"
+              schema:
+                $ref: '#/definitions/UnauthorizedResponse'
+            "403":
+              description: Problems with the used password util. Should not happen.
+              schema:
+                $ref: '#/definitions/GenericResponse'
+            "404":
+              description: User not found
+              schema:
+                $ref: '#/definitions/GenericResponse'
+
+    delete:
+          summary: Delete on specific user
+          operationId: deleteUserById
+          tags:
+            - users
+            - authorization
+          parameters:
+            - name: Authorization
+              in: header
+              required: true
+              description: Requires authentication via header "Authorization":"Bearer {{token}}"
+              type: string
+            - name: userId
+              in: path
+              required: true
+              description: The id of the user to modify partially
+              type: string
+          responses:
+            "200":
+              description: Success Message
+              schema:
+                $ref: '#/definitions/GenericResponse'
+            "400":
+              description: User input is not valid - description message contains more info.
+              schema:
+                $ref: '#/definitions/GenericResponse'
+            "401":
+              description: Request sent without a (valid) "Bearer_Token"
+              schema:
+                $ref: '#/definitions/UnauthorizedResponse'
+            "403":
+              description: Problems with the used password util. Should not happen.
+              schema:
+                $ref: '#/definitions/GenericResponse'
+            "404":
+              description: User not found
+              schema:
+                $ref: '#/definitions/GenericResponse'
+
+  /users/e/{userEmail}:
+    get:
+      summary: Info for a specific user
+      operationId: showUserByEmail
+      tags:
+        - users
+      parameters:
+        - name: userEmail
+          in: path
+          required: true
+          description: The email of the user to retrieve
+          type: string
+      responses:
+        "200":
+          description: Expected response to a valid request
+          schema:
+            $ref: '#/definitions/UserResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+  /users/{userId}/groups:
+    get:
+      summary: Info for a specific user
+      operationId: showUsersGroups
+      tags:
+        - users
+        - groups
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: The id of the user we want to retrieve groups from
+          type: integer
+      responses:
+        "200":
+          description: Expected response to a valid request
+          schema:
+            $ref: '#/definitions/Groups'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+  # --- Groups ---
+  /groups:
+    get:
+      summary: List groups
+      operationId: listGroups
+      tags:
+        - groups
+      parameters:
+        - name: empty
+          in: query
+          description: Loads only groups that have no members in them - mutually exclusive with other query operations
+          required: false
+          type: string
+        - name: userId
+          in: query
+          description: Loads all groups for one specific user - mutually exclusive with other query operations
+          required: false
+          type: integer
+        - name: email
+          in: query
+          description: Loads only groups that belong to the user with the given email - mutually exclusive with other query operations
+          required: false
+          type: string
+      responses:
+        "200":
+          description: A list of users
+          schema:
+            $ref: '#/definitions/UserResponseList'
+
+    post:
+      description: Creates a new Group. Duplicate names and descriptions can exist.
+      operationId: addGroup
+      tags:
+        - groups
+        - authorization
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: Requires authentication via header "Authorization":"Bearer {{token}}"
+          type: string
+        - name: group content
+          in: body
+          description: whole new group object
+          required: true
+          schema:
+            $ref: '#/definitions/NewGroup'
+      responses:
+        "201":
+          description: Success Message
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "400":
+          description: User input is not valid - description message contains more info.
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "401":
+          description: Request sent without a (valid) "Bearer_Token"
+          schema:
+            $ref: '#/definitions/UnauthorizedResponse'
+        "403":
+          description: Problems with the used password util. Should not happen.
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+  /groups/{groupId}:
+    get:
+      summary: Get a specific group by id.
+      operationId: getGroupById
+      tags:
+        - groups
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          description: The id of the group we want to query
+          type: string
+      responses:
+        "200":
+          description: Queried group
+          schema:
+            $ref: '#/definitions/Group'
+        "404":
+          description: Group not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+    put:
+        summary: Completely modify one group
+        operationId: putGroupById
+        tags:
+          - groups
+          - authorization
+        parameters:
+          - name: Authorization
+            in: header
+            required: true
+            description: Requires authentication via header "Authorization":"Bearer {{token}}"
+            type: string
+          - name: groupId
+            in: path
+            required: true
+            description: The id of the group we want to query
+            type: string
+          - name: group
+            in: body
+            description: group object
+            required: true
+            schema:
+              $ref: '#/definitions/NewGroup'
+
+        responses:
+          "200":
+            description: Success Message
+            schema:
+              $ref: '#/definitions/GenericResponse'
+          "400":
+            description: User input is not valid - description message contains more info.
+            schema:
+              $ref: '#/definitions/GenericResponse'
+          "403":
+            description: Problems with the used password util. Should not happen.
+            schema:
+              $ref: '#/definitions/GenericResponse'
+          "404":
+            description: Group not found
+            schema:
+              $ref: '#/definitions/GenericResponse'
+
+    patch:
+          summary: Patch one specific group
+          operationId: patchGroupById
+          tags:
+            - groups
+            - authorization
+          parameters:
+            - name: Authorization
+              in: header
+              required: true
+              description: Requires authentication via header "Authorization":"Bearer {{token}}"
+              type: string
+            - name: groupId
+              in: path
+              required: true
+              description: The id of the group we want to query
+              type: string
+            - name: group
+              in: body
+              description: Group object
+              required: true
+              schema:
+                $ref: '#/definitions/NewGroup'
+          responses:
+            "200":
+              description: Success Message
+              schema:
+                $ref: '#/definitions/GenericResponse'
+            "400":
+              description: User input is not valid - description message contains more info.
+              schema:
+                $ref: '#/definitions/GenericResponse'
+            "401":
+              description: Request sent without a (valid) "Bearer_Token"
+              schema:
+                $ref: '#/definitions/UnauthorizedResponse'
+            "403":
+              description: Problems with the used password util. Should not happen.
+              schema:
+                $ref: '#/definitions/GenericResponse'
+            "404":
+              description: Group not found
+              schema:
+                $ref: '#/definitions/GenericResponse'
+    delete:
+          summary: Delete on specific group
+          operationId: deleteGroupById
+          tags:
+            - groups
+            - authorization
+          parameters:
+            - name: Authorization
+              in: header
+              required: true
+              description: Requires authentication via header "Authorization":"Bearer {{token}}"
+              type: string
+            - name: groupId
+              in: path
+              required: true
+              description: The id of the group we want to query
+              type: string
+          responses:
+            "200":
+              description: Success Message
+              schema:
+                $ref: '#/definitions/GenericResponse'
+            "400":
+              description: User input is not valid - description message contains more info.
+              schema:
+                $ref: '#/definitions/GenericResponse'
+            "401":
+              description: Request sent without a (valid) "Bearer_Token"
+              schema:
+                $ref: '#/definitions/UnauthorizedResponse'
+            "404":
+              description: Group not found
+              schema:
+                $ref: '#/definitions/GenericResponse'
+
+  /groups/{groupId}/users:
+    get:
+      summary: retrieve all users in a group
+      operationId: showGroupsUsers
+      tags:
+        - users
+        - groups
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          description: The id of the group
+          type: integer
+      responses:
+        "200":
+          description: Expected response to a valid request
+          schema:
+            $ref: '#/definitions/UserResponseList'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+  /groups/{groupId}/decks:
+    get:
+      summary: retrieve all cards from one deck
+      operationId: showGroupsDecks
+      tags:
+        - decks
+        - groups
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          description: The id of the group
+          type: integer
+      responses:
+        "200":
+          description: Expected response to a valid request
+          schema:
+            $ref: '#/definitions/DeckResponseList'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+  # --- decks ---
+  /cardDecks:
+    get:
+      summary: List decks
+      operationId: listDecks
+      tags:
+        - decks
+      responses:
+        "200":
+          description: A list of decks or an empty list
+          schema:
+            $ref: '#/definitions/DeckResponseList'
+
+    post:
+      description: Create a new deck
+      operationId: addDeck
+      tags:
+        - decks
+        - authorization
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: Requires authentication via header "Authorization":"Bearer {{token}}"
+          type: string
+        - name: deck
+          in: body
+          description: whole new group object
+          required: true
+          schema:
+            $ref: '#/definitions/DeckRequest'
+      responses:
+        "201":
+          description: Success Message
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "400":
+          description: User input is not valid - description message contains more info.
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "401":
+          description: Request sent without a (valid) "Bearer_Token"
+          schema:
+            $ref: '#/definitions/UnauthorizedResponse'
+
+  /cardDecks/{cardDeckId}:
+    get:
+      summary: Get a specific deck by id
+      operationId: getDeckById
+      tags:
+        - decks
+      parameters:
+        - name: cardDeckId
+          in: path
+          required: true
+          description: The id of the deck we want to query
+          type: string
+      responses:
+        "200":
+          description: A specific Deck
+          schema:
+            $ref: '#/definitions/DeckResponse'
+        "404":
+          description: Object not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+    put:
+      summary: Completely modify one deck
+      operationId: putDeckById
+      tags:
+        - decks
+        - authorization
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: Only authorized users may modify - expected value="Bearer {{token}}"
+          type: string
+        - name: cardDeckId
+          in: path
+          required: true
+          description: The id of the deck we want to query
+          type: string
+        - name: deck
+          in: body
+          description: whole new group object
+          required: true
+          schema:
+            $ref: '#/definitions/DeckRequest'
+      responses:
+        "200":
+          description: Success Message
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "400":
+          description: User input is not valid - description message contains more info.
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "401":
+          description: Request sent without a (valid) "Bearer_Token"
+          schema:
+            $ref: '#/definitions/UnauthorizedResponse'
+        "404":
+          description: Deck not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+    patch:
+      summary: Patch one specific deck's attributes
+      operationId: patchDeckById
+      tags:
+        - decks
+        - authorization
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: Only authorized users may modify - expected value="Bearer {{token}}"
+          type: string
+        - name: cardDeckId
+          in: path
+          required: true
+          description: The id of the deck we want to query
+          type: string
+        - name: deck
+          in: body
+          description: whole new group object
+          required: true
+          schema:
+            $ref: '#/definitions/DeckRequest'
+      responses:
+        "200":
+          description: Success Message
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "400":
+          description: User input is not valid - description message contains more info.
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "401":
+          description: Request sent without a (valid) "Bearer_Token"
+          schema:
+            $ref: '#/definitions/UnauthorizedResponse'
+        "404":
+          description: Deck not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+    delete:
+      summary: Delete one specific deck
+      operationId: deleteDeckById
+      tags:
+        - decks
+        - authorization
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: Only authorized users may modify - expected value="Bearer {{token}}"
+          type: string
+        - name: cardDeckId
+          in: path
+          required: true
+          description: The id of the deck we want to query
+          type: string
+      responses:
+        "200":
+          description: Success Message
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "400":
+          description: User input is not valid - description message contains more info.
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "403":
+          description: Problems with the used password util. Should not happen.
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "404":
+          description: Deck not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+  /cardDecks/{cardDeckId}/cards:
+    get:
+      summary: List decks cards in a deck - optionally has two parameters that have to be combined to filter the decks - cards?size=1&start=0
+      operationId: listDecksCards
+      tags:
+        - decks
+      parameters:
+        - name: cardDeckId
+          in: path
+          required: true
+          description: The id of the deck we want to query
+          type: string
+        - name: size
+          in: query
+          description: limit cards returned to "size"
+          required: false
+          type: integer
+        - name: start
+          in: query
+          description: start getting cards from position "start"
+          required: false
+          type: integer
+      responses:
+        "200":
+          description: A list of cards of the deck
+          schema:
+            $ref: '#/definitions/CardResponseList'
+
+  /cardDecks/{cardDeckId}/group:
+      get:
+        summary: Get the group of a specific card
+        operationId: listDecksGroup
+        tags:
+          - decks
+        parameters:
+          - name: cardDeckId
+            in: path
+            required: true
+            description: The id of the deck we want to query
+            type: string
+          - name: size
+            in: query
+            description: limit cards returned to "size"
+            required: false
+            type: integer
+          - name: start
+            in: query
+            description: start getting cards from position "start"
+            required: false
+            type: integer
+        responses:
+          "200":
+            description: Group of the given deck
+            schema:
+              $ref: '#/definitions/Group'
+
+  # --- Cards ---
+  /cards:
+    get:
+      summary: List cards
+      operationId: listCards
+      tags:
+        - cards
+      parameters:
+        - name: authorId
+          in: query
+          description: Loads cards belonging to a specific user with the given id - can be combined with deckId
+          required: false
+          type: string
+        - name: deckId
+          in: query
+          description: Loads cards belonging to a specific deck with deckid - can be combined with authorId
+          required: false
+          type: integer
+        - name: id
+          in: query
+          description: Can be chained multiple times to load multiple cards by their id
+          required: false
+          type: string
+      responses:
+        "200":
+          description: A list of decks
+          schema:
+            $ref: '#/definitions/CardResponseList'
+
+    post:
+      description: Create a new Card
+      operationId: addCards
+      tags:
+        - cards
+        - authorization
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: Requires authentication via header "Authorization":"Bearer {{token}}"
+          type: string
+        - name: card
+          in: body
+          description: whole new card object
+          required: true
+          schema:
+            $ref: '#/definitions/CardRequest'
+      responses:
+        "201":
+          description: Success Message
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "400":
+          description: User input is not valid - description message contains more info.
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "401":
+          description: Request sent without a (valid) "Bearer_Token"
+          schema:
+            $ref: '#/definitions/UnauthorizedResponse'
+        "403":
+          description: Problems with the used password util. Should not happen.
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+  /cards/{cardId}:
+    get:
+      summary: Get a specific card by id
+      operationId: getCardById
+      tags:
+        - cards
+      parameters:
+        - name: cardId
+          in: path
+          required: true
+          description: The id of the card we want to query
+          type: string
+      responses:
+        "200":
+          description: queried object
+          schema:
+            $ref: '#/definitions/CardResponse'
+        "404":
+          description: Object not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+    put:
+      summary: Completely modify one card's attributes
+      operationId: putCardById
+      tags:
+        - cards
+        - authorization
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: Only authorized users may modify - expected value="Bearer {{token}}"
+          type: string
+        - name: cardId
+          in: path
+          required: true
+          description: Id of the object we want to query
+          type: string
+        - name: card
+          in: body
+          description: all attributes needed to update the resource completely
+          required: true
+          schema:
+            $ref: '#/definitions/CardRequest'
+      responses:
+        "200":
+          description: Success Message
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "400":
+          description: User input is not valid - description message contains more info.
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "401":
+          description: Request sent without a (valid) "Bearer_Token"
+          schema:
+            $ref: '#/definitions/UnauthorizedResponse'
+        "404":
+          description: Object not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+    patch:
+      summary: Patch one specific card's attributes
+      operationId: patchCardById
+      tags:
+        - cards
+        - authorization
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: Only authorized users may modify - expected value="Bearer {{token}}"
+          type: string
+        - name: cardId
+          in: path
+          required: true
+          description: Id of the object we want to query
+          type: string
+        - name: card
+          in: body
+          description: all attributes we want to change in the resource
+          required: true
+          schema:
+            $ref: '#/definitions/CardRequest'
+      responses:
+        "200":
+          description: Success Message
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "400":
+          description: User input is not valid - description message contains more info.
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "401":
+          description: Request sent without a (valid) "Bearer_Token"
+          schema:
+            $ref: '#/definitions/UnauthorizedResponse'
+        "404":
+          description: Object not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+    delete:
+      summary: Delete one specific card
+      operationId: deleteCardById
+      tags:
+        - cards
+        - authorization
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: Only authorized users may modify - expected value="Bearer {{token}}"
+          type: string
+        - name: cardId
+          in: path
+          required: true
+          description: The id of the card we want to query
+          type: string
+      responses:
+        "200":
+          description: Success Message
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "400":
+          description: User input is not valid - description message contains more info.
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "403":
+          description: Problems with the used password util. Should not happen.
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "404":
+          description: Object not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+  /cards/{cardId}/author:
+    get:
+      summary: Get a specific card by id and return it's author
+      operationId: getCardAuthorById
+      tags:
+        - cards
+      parameters:
+        - name: cardId
+          in: path
+          required: true
+          description: The id of the card we want to query
+          type: string
+      responses:
+        "200":
+          description: queried object
+          schema:
+            $ref: '#/definitions/UserResponse'
+        "404":
+          description: Object not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+  /cards/{cardId}/qustion:
+    get:
+      summary: Get a specific card by id and return it's question
+      operationId: getCardQuestionById
+      tags:
+        - cards
+      parameters:
+        - name: cardId
+          in: path
+          required: true
+          description: The id of the card we want to query
+          type: string
+      responses:
+        "200":
+          description: queried object
+          schema:
+            $ref: '#/definitions/QuestionResponse'
+        "404":
+          description: Object not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+  /cards/{cardId}/answers:
+    get:
+      summary: Get a specific card by id
+      operationId: getCardAnswersById
+      tags:
+        - cards
+      parameters:
+        - name: cardId
+          in: path
+          required: true
+          description: The id of the card we want to query
+          type: string
+      responses:
+        "200":
+          description: queried object
+          schema:
+            $ref: '#/definitions/AnswerResponseList'
+        "404":
+          description: Object not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+  # --- Categories ---
+  /categories:
+    get:
+      summary: List categories
+      operationId: listCategories
+      tags:
+        - categories
+      parameters:
+        - name: root
+          in: query
+          description: Loads all categories whose parents are set to null.
+          required: false
+          type: boolean
+      responses:
+        "200":
+          description: A list of categories
+          schema:
+            $ref: '#/definitions/CategoryResponseList'
+
+    post:
+      description: Create a category
+      operationId: addCategory
+      tags:
+        - categories
+        - authorization
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: Requires authentication via header "Authorization":"Bearer {{token}}"
+          type: string
+        - name: category
+          in: body
+          description: category to add
+          required: true
+          schema:
+            $ref: '#/definitions/CategoryRequest'
+      responses:
+        "201":
+          description: Success Message
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "400":
+          description: User input is not valid - description message contains more info.
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "401":
+          description: Request sent without a (valid) "Bearer_Token"
+          schema:
+            $ref: '#/definitions/UnauthorizedResponse'
+        "403":
+          description: Problems with the used password util. Should not happen.
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+  /categories/{categoryId}:
+    get:
+      summary: Get a specific category by id
+      operationId: getCategoryById
+      tags:
+        - categories
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          description: The id of the category we want to query
+          type: string
+      responses:
+        "200":
+          description: queried object
+          schema:
+            $ref: '#/definitions/CategoryResponse'
+        "404":
+          description: Object not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+    put:
+      summary: Completely modify one category's attributes
+      operationId: putCategoryById
+      tags:
+        - categories
+        - authorization
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: Only authorized users may modify - expected value="Bearer {{token}}"
+          type: string
+        - name: categoryId
+          in: path
+          required: true
+          description: Id of the object we want to query
+          type: string
+        - name: category
+          in: body
+          description: all attributes needed to update the resource completely
+          required: true
+          schema:
+            $ref: '#/definitions/CategoryRequest'
+      responses:
+        "200":
+          description: Success Message
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "400":
+          description: User input is not valid - description message contains more info.
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "401":
+          description: Request sent without a (valid) "Bearer_Token"
+          schema:
+            $ref: '#/definitions/UnauthorizedResponse'
+        "404":
+          description: Object not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+    patch:
+      summary: Patch one specific category's attributes
+      operationId: patchCategoryById
+      tags:
+        - categories
+        - authorization
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: Only authorized users may modify - expected value="Bearer {{token}}"
+          type: string
+        - name: categoryId
+          in: path
+          required: true
+          description: Id of the object we want to query
+          type: string
+        - name: category
+          in: body
+          description: all attributes we want to change in the resource
+          required: true
+          schema:
+            $ref: '#/definitions/CategoryRequest'
+      responses:
+        "200":
+          description: Success Message
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "400":
+          description: User input is not valid - description message contains more info.
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "401":
+          description: Request sent without a (valid) "Bearer_Token"
+          schema:
+            $ref: '#/definitions/UnauthorizedResponse'
+        "404":
+          description: Object not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+  /categories/{categoryId}/children:
+    get:
+      summary: Get children of a specific category
+      operationId: getCategoryChildrenById
+      tags:
+        - categories
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          description: The id of the category we want to query
+          type: string
+      responses:
+        "200":
+          description: queried object
+          schema:
+            $ref: '#/definitions/CategoryResponseList'
+        "404":
+          description: Object not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+  /categories/{categoryId}/decks:
+    get:
+      summary: Get carddecks that are assorted under this category
+      operationId: getCategoryDecksById
+      tags:
+        - categories
+        - decks
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          description: The id of the category we want to query
+          type: string
+      responses:
+        "200":
+          description: queried object
+          schema:
+            $ref: '#/definitions/DeckResponseList'
+        "404":
+          description: Object not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+  # --- Ratings ---
+  /ratings:
+    get:
+      summary: List ratings. Queries can be used to target specific cards/ratings/answers. Queries can be conjoined - you can search for the rating in one answer/card of one specific user.
+      operationId: listRatings
+      tags:
+        - ratings
+      parameters:
+        - name: flashCardId
+          in: query
+          description: Loads all ratings for one card
+          required: false
+          type: integer
+        - name: answerId
+          in: query
+          description: Loads all ratings for one answer
+          required: false
+          type: integer
+        - name: userId
+          in: query
+          description: Loads all ratings for one card
+          required: false
+          type: integer
+      responses:
+        "200":
+          description: A list of ratings
+          schema:
+            $ref: '#/definitions/RatingResponseList'
+
+    post:
+      description: Create a rating
+      operationId: addRating
+      tags:
+        - ratings
+        - authorization
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: Requires authentication via header "Authorization":"Bearer {{token}}"
+          type: string
+        - name: rating
+          in: body
+          description: rating to add
+          required: true
+          schema:
+            $ref: '#/definitions/RatingRequest'
+      responses:
+        "201":
+          description: Success Message
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "400":
+          description: User input is not valid - description message contains more info.
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "401":
+          description: Request sent without a (valid) "Bearer_Token"
+          schema:
+            $ref: '#/definitions/UnauthorizedResponse'
+        "403":
+          description: Problems with the used password util. Should not happen.
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+  /ratings/{ratingId}:
+    get:
+      summary: Get a specific rating by id
+      operationId: getRatingById
+      tags:
+        - ratings
+      parameters:
+        - name: ratingId
+          in: path
+          required: true
+          description: The id of the rating we want to query
+          type: string
+      responses:
+        "200":
+          description: A specific Rating
+          schema:
+            $ref: '#/definitions/RatingResponse'
+        "404":
+          description: Object not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+    patch:
+      summary: Patch one specific rating's attributes
+      operationId: patchRatingById
+      tags:
+        - ratings
+        - authorization
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: Only authorized users may modify - expected value="Bearer {{token}}"
+          type: string
+        - name: ratingId
+          in: path
+          required: true
+          description: The id of the rating we want to query
+          type: string
+        - name: rating
+          in: body
+          description: whole new group object
+          required: true
+          schema:
+            $ref: '#/definitions/RatingRequest'
+      responses:
+        "200":
+          description: Success Message
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "400":
+          description: User input is not valid - description message contains more info.
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "401":
+          description: Request sent without a (valid) "Bearer_Token"
+          schema:
+            $ref: '#/definitions/UnauthorizedResponse'
+        "404":
+          description: Object not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+    delete:
+      summary: Delete one specific rating. This also compensates all affected objects - if the user rated an object with -1, after deleting the rating it is now returned to the orgiinal state.
+      operationId: deleteRatingById
+      tags:
+        - ratings
+        - authorization
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: Only authorized users may modify - expected value="Bearer {{token}}"
+          type: string
+        - name: ratingId
+          in: path
+          required: true
+          description: The id of the rating we want to query
+          type: string
+      responses:
+        "200":
+          description: Success Message
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "400":
+          description: User input is not valid - description message contains more info.
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "404":
+          description: Object not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+  # --- Tags ---
+  /tags:
+    get:
+      summary: List Tags.
+      operationId: listTags
+      tags:
+        - tags
+      parameters:
+        - name: size
+          in: query
+          description: Determine the size of the response
+          required: false
+          type: integer
+        - name: start
+          in: query
+          description: Return tags after the index start
+          required: false
+          type: integer
+        - name: startsWith
+          in: query
+          description: Return tags that start with the string given string
+          required: false
+          type: string
+        - name: sortBy
+          in: query
+          description: Sort by can be used currently to sort by usage count. The correct Value would be 'sortBy=usageCount%20asc'
+          required: false
+          type: string
+      responses:
+        "200":
+          description: A list of tags
+          schema:
+            $ref: '#/definitions/TagResponseList'
+
+  /tags/cards:
+    get:
+      summary: Get cards that all have the same tags that are specified via query parameters. Those can be chained again. "?id=1&?name=example" returns all cards that have the tag with id 1 and the tag with name example. Any non existant tags are ignored. Thus if you specify two tag names but one is invalid its the same as just querying for that one.
+      operationId: getCardsByTags
+      tags:
+        - tags
+      parameters:
+        - name: id
+          in: query
+          description: Determine the size of the response
+          required: false
+          type: integer
+        - name: name
+          in: query
+          description: Return tags after the index start
+          required: false
+          type: string
+      responses:
+        "200":
+          description: A list of tags
+          schema:
+            $ref: '#/definitions/TagResponseList'
+
+  /tags/{tagId}:
+    get:
+      summary: Get a specific tag by id
+      operationId: getTagById
+      tags:
+        - tags
+      parameters:
+        - name: tagId
+          in: path
+          required: true
+          description: The id of the tag we want to query
+          type: string
+      responses:
+        "200":
+          description: queried object
+          schema:
+            $ref: '#/definitions/TagResponse'
+        "404":
+          description: Object not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+  /tags/{tagId}/cards:
+    get:
+      summary: Get all cards from one specific tag by id
+      operationId: getTagsCardsById
+      tags:
+        - tags
+        - cards
+      parameters:
+        - name: tagId
+          in: path
+          required: true
+          description: The id of the tag we want to query
+          type: string
+      responses:
+        "200":
+          description: queried object
+          schema:
+            $ref: '#/definitions/CardResponseList'
+        "404":
+          description: Object not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+  # --- Messages ---
+  /messages:
+    get:
+      summary: List Messages of the currently logged in user.
+      operationId: listMessages
+      tags:
+        - messages
+        - authorization
+      parameters:
+        - name: startDate
+          in: query
+          description: Loads all ratings for one card
+          required: false
+          type: string
+          format: date-time
+      responses:
+        "200":
+          description: A list of ratings
+          schema:
+            $ref: '#/definitions/MessageResponseList'
+        "401":
+          description: Request sent without a (valid) "Bearer_Token"
+          schema:
+            $ref: '#/definitions/UnauthorizedResponse'
+    post:
+      description: Create a new message
+      operationId: addMessage
+      tags:
+        - messages
+        - authorization
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: Requires authentication via header "Authorization":"Bearer {{token}}"
+          type: string
+        - name: message
+          in: body
+          description: message to add
+          required: true
+          schema:
+            $ref: '#/definitions/MessageRequest'
+      responses:
+        "201":
+          description: Success Message
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "400":
+          description: User input is not valid - description message contains more info.
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "401":
+          description: Request sent without a (valid) "Bearer_Token"
+          schema:
+            $ref: '#/definitions/UnauthorizedResponse'
+        "403":
+          description: Problems with the used password util. Should not happen.
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+  /messages/{messageId}:
+    get:
+      summary: Get a specific message by id
+      operationId: getMessageById
+      tags:
+        - messages
+        - authorization
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          description: The id of the message we want to query
+          type: string
+      responses:
+        "200":
+          description: A specific Message
+          schema:
+            $ref: '#/definitions/MessageResponse'
+        "404":
+          description: Object not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+    patch:
+      summary: Patch one specific message's attributes
+      operationId: patchMessageById
+      tags:
+        - messages
+        - authorization
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: Only authorized users may modify - expected value="Bearer {{token}}"
+          type: string
+        - name: messageId
+          in: path
+          required: true
+          description: The id of the message we want to query
+          type: string
+        - name: message
+          in: body
+          description: whole new group object
+          required: true
+          schema:
+            $ref: '#/definitions/MessageRequest'
+      responses:
+        "200":
+          description: Success Message
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "400":
+          description: User input is not valid - description message contains more info.
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "401":
+          description: Request sent without a (valid) "Bearer_Token"
+          schema:
+            $ref: '#/definitions/UnauthorizedResponse'
+        "404":
+          description: Object not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+    delete:
+      summary: Delete one specific message. This also compensates all affected objects - if the user rated an object with -1, after deleting the message it is now returned to the orgiinal state.
+      operationId: deleteMessageById
+      tags:
+        - messages
+        - authorization
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: Only authorized users may modify - expected value="Bearer {{token}}"
+          type: string
+        - name: messageId
+          in: path
+          required: true
+          description: The id of the message we want to query
+          type: string
+      responses:
+        "200":
+          description: Success Message
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "400":
+          description: User input is not valid - description message contains more info.
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "404":
+          description: Object not found
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+  # --- CardStatistics ---
+  /cardStatistics:
+    get:
+      summary: List cardStatistics of the currently logged in user.
+      operationId: listCardStatistics
+      tags:
+        - cardStatistics
+        - authorization
+      parameters:
+        - name: deckId
+          in: query
+          description: Loads all cardStatistics for one Deck
+          required: false
+          type: integer
+        - name: count
+          in: query
+          description: Only send all statistics on the server if the client count is lower than the database count for this user.
+          required: false
+          type: integer
+      responses:
+        "200":
+          description: A list of ratings
+          schema:
+            $ref: '#/definitions/CardStatisticResponse'
+        "401":
+          description: Request sent without a (valid) "Bearer_Token"
+          schema:
+            $ref: '#/definitions/UnauthorizedResponse'
+    post:
+      description: Create a new cardStatistic object for the current user (determined by token).
+      operationId: addCardStatistics
+      tags:
+        - cardStatistics
+        - authorization
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: Requires authentication via header "Authorization":"Bearer {{token}}"
+          type: string
+        - name: statistic
+          in: body
+          description: cardStatistic to add
+          required: true
+          schema:
+            $ref: '#/definitions/CardStatisticRequest'
+      responses:
+        "201":
+          description: Success Message
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "400":
+          description: User input is not valid - description message contains more info.
+          schema:
+            $ref: '#/definitions/GenericResponse'
+        "401":
+          description: Request sent without a (valid) "Bearer_Token"
+          schema:
+            $ref: '#/definitions/UnauthorizedResponse'
+        "403":
+          description: Problems with the used password util. Should not happen.
+          schema:
+            $ref: '#/definitions/GenericResponse'
+
+definitions:
+  HeartbeatResponse:
+    properties:
+      currentDate:
+        type: string
+        format: date-time
+
+  LoginRequest:
+    required:
+      - email
+      - password
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+
+  LoginResponse:
+    properties:
+      statuscode:
+        type: integer
+      description:
+        type: string
+      token:
+        type: string
+
+  UnauthorizedResponse:
+    properties:
+      statuscode:
+        type: integer
+      description:
+        type: string
+
+  UploadedMediaResponse:
+    properties:
+      mediaId:
+        type: integer
+      mediaURI:
+        type: string
+        format: URI
+      author:
+        $ref: '#/definitions/UserResponse'
+      created:
+        type: string
+        format: date-time
+      mediaType:
+        type: string
+        format: media type e.g. "image/png"
+
+  UserResponse:
+    properties:
+      userId:
+        type: integer
+        format: int64
+      avatar:
+        type: string
+        format: uri
+      name:
+        type: string
+      email:
+        type: string
+      rating:
+        type: string
+      created:
+        type: string
+        format: date-time
+      lastLogin:
+        type: string
+        format: date-time
+
+  UserResponseList:
+    type: array
+    items:
+      $ref: '#/definitions/UserResponse'
+
+  PutUser:
+    description: For "PUT" all values have to exist, else an error is thrown. For "PATCH" you can change single values. Either use name+description to create a new one when put/patching users or specify groupId to add the user to an existing group.
+    properties:
+      name:
+        type: string
+      email:
+        type: string
+      password:
+        type: string
+      rating:
+        type: string
+      groups:
+        $ref: '#/definitions/Groups'
+
+  UserRequest:
+    required:
+      - name
+      - password
+      - email
+    properties:
+      name:
+        type: string
+      email:
+        type: string
+      password:
+        type: string
+      rating:
+        type: string
+
+  GenericResponse:
+    properties:
+      statuscode:
+        type: integer
+      description:
+        type: string
+      id:
+        type: integer
+
+  Group:
+    properties:
+      name:
+        type: string
+      description:
+        type: string
+      groupId:
+        type: integer
+
+  Groups:
+    type: array
+    items:
+      $ref: '#/definitions/Group'
+
+  UserIdRequest:
+    properties:
+      userId:
+        type: integer
+
+  UserIdRequestList:
+    type: array
+    items:
+      $ref: '#/definitions/UserIdRequest'
+
+  NewGroup:
+    properties:
+      name:
+        type: string
+      description:
+        type: string
+      users:
+        $ref: '#/definitions/UserIdRequestList'
+
+  GroupIdRequest:
+    properties:
+      groupId:
+        type: integer
+
+  DeckResponse:
+    properties:
+      cardDeckId:
+        type: integer
+      userGroup:
+        $ref: '#/definitions/Group'
+      cardDeckName:
+        type: string
+      cardDeckDescription:
+        type: string
+      visible:
+        type: boolean
+
+  DeckResponseList:
+    type: array
+    items:
+      $ref: '#/definitions/DeckResponse'
+
+  DeckRequest:
+    properties:
+      cardDeckName:
+        type: string
+      cardDeckDescription:
+        type: string
+      cards:
+        $ref: '#/definitions/CardIdRequestList'
+      userGroup:
+        $ref: '#/definitions/GroupIdRequest'
+      visible:
+        type: boolean
+
+  QuestionResponse:
+    properties:
+      questionId:
+        type: integer
+      questionText:
+        type: string
+      mediaURI:
+        type: string
+      author:
+        $ref: '#/definitions/UserResponse'
+
+  QuestionRequest:
+    properties:
+      questionId:
+        type: integer
+      questionText:
+        type: string
+      mediaURI:
+        type: string
+      author:
+        $ref: '#/definitions/UserResponse'
+
+  AnswerRequest:
+    properties:
+      answerText:
+        type: string
+      answerHint:
+        type: string
+      mediaURI:
+        type: string
+      author:
+        $ref: '#/definitions/UserResponse'
+      answerCorrect:
+        type: boolean
+
+  AnswerRequestList:
+    type: array
+    items:
+      $ref: '#/definitions/AnswerRequest'
+
+  AnswerResponse:
+    properties:
+      answerId:
+        type: integer
+      answerText:
+        type: string
+      answerHint:
+        type: string
+      mediaURI:
+        type: string
+      author:
+        $ref: '#/definitions/UserResponse'
+      answerCorrect:
+        type: boolean
+
+  AnswerResponseList:
+    type: array
+    items:
+      $ref: '#/definitions/AnswerResponse'
+
+  AnswerIdRequest:
+    properties:
+      answerId:
+        type: integer
+
+  TagRequest:
+    properties:
+      tagId:
+        type: integer
+
+  TagRequestList:
+    type: array
+    items:
+      $ref: '#/definitions/TagRequest'
+
+  CardRequest:
+     properties:
+       reting:
+         type: integer
+       question:
+         $ref: '#/definitions/QuestionRequest'
+       author:
+         $ref: '#/definitions/UserResponse'
+       answers:
+         $ref: '#/definitions/AnswerRequestList'
+       tags:
+         $ref: '#/definitions/TagRequestList'
+       multipleChoice:
+         type: boolean
+
+  CardResponse:
+    properties:
+      flashcardId:
+        type: integer
+      tags:
+        $ref: '#/definitions/TagRequestList'
+      reting:
+        type: integer
+      created:
+        type: string
+        format: date-time
+      lastUpdated:
+        type: string
+        format: date-time
+      question:
+        $ref: '#/definitions/QuestionResponse'
+      author:
+        $ref: '#/definitions/UserResponse'
+      multipleChoice:
+        type: boolean
+
+  CardIdRequest:
+     properties:
+       flashcardId:
+         type: integer
+
+  CardIdRequestList:
+    type: array
+    items:
+      $ref: '#/definitions/CardIdRequest'
+
+  CardResponseList:
+    type: array
+    items:
+      $ref: '#/definitions/CardResponse'
+
+  DeckIdRequest:
+    properties:
+      cardDeckId:
+        type: integer
+
+  DeckIdRequestList:
+    type: array
+    items:
+      $ref: '#/definitions/DeckIdRequest'
+
+  CategoryIdRequest:
+    properties:
+      categoryId:
+        type: integer
+
+  CategoryResponse:
+    properties:
+      categoryId:
+        type: integer
+      categoryName:
+        type: string
+      parent:
+        $ref: '#/definitions/CategoryResponse'
+
+  CategoryResponseList:
+    type: array
+    items:
+      $ref: '#/definitions/CategoryResponse'
+
+  CategoryRequest:
+    properties:
+      categoryName:
+        type: string
+      cardDecks:
+        $ref: '#/definitions/DeckIdRequestList'
+      parent:
+        $ref: '#/definitions/CategoryIdRequest'
+
+  RatingResponse:
+    description: will either contain an answerId or flashCardId.
+    required:
+      - ratingId
+      - ratingModifier
+      - author
+    properties:
+      ratingId:
+        type: integer
+      author:
+        $ref: '#/definitions/UserResponse'
+      ratingModifier:
+        type: integer
+      answer:
+        $ref: '#/definitions/AnswerResponse'
+      flashcard:
+        $ref: '#/definitions/CardResponse'
+
+  RatingResponseList:
+    type: array
+    items:
+      $ref: '#/definitions/RatingResponse'
+
+  RatingRequest:
+    description: has to either contain an answerId or flashCardId. The api will save the correct version.
+    required:
+      - ratingModifier
+      - author
+    properties:
+      author:
+        $ref: '#/definitions/UserIdRequest'
+      ratingModifier:
+        type: integer
+      answer:
+        $ref: '#/definitions/AnswerIdRequest'
+      flashcard:
+        $ref: '#/definitions/CardIdRequest'
+
+  TagResponse:
+    properties:
+      tagId:
+        type: integer
+      tagName:
+        type: string
+
+  TagResponseList:
+    type: array
+    items:
+      $ref: '#/definitions/TagResponse'
+
+  MessageResponse:
+    properties:
+      messageId:
+        type: integer
+      recipient:
+        $ref: '#/definitions/UserResponse'
+      sender:
+        $ref: '#/definitions/UserResponse'
+      content:
+        type: string
+      created:
+        type: string
+        format: date-time
+      targetDeck:
+        $ref: '#/definitions/DeckResponse'
+
+  MessageResponseList:
+    type: array
+    items:
+      $ref: '#/definitions/MessageResponse'
+
+  MessageRequest:
+    properties:
+      recipient:
+        $ref: '#/definitions/UserIdRequest'
+      sender:
+        $ref: '#/definitions/UserIdRequest'
+      content:
+        type: string
+      targetDeck:
+        $ref: '#/definitions/DeckIdRequest'
+
+  CardStatisticRequest:
+    properties:
+      card:
+        $ref: '#/definitions/CardIdRequest'
+      knowledge:
+        type: number
+        format: float - Expected values are between 0 and 1. where 0=remembered nothing and 1=remembered everything
+      startDate:
+        type: string
+        format: date-time
+      endDate:
+        type: string
+        format: date-time
+      drawer:
+        type: integer
+
+  CardStatisticResponse:
+    properties:
+      cardStatisticId:
+        type: integer
+      user:
+        $ref: '#/definitions/UserResponse'
+      card:
+        $ref: '#/definitions/CardResponse'
+      knowledge:
+        type: number
+        format: float - Expected values are between 0 and 1. where 0=remembered nothing and 1=remembered everything
+      startDate:
+        type: string
+        format: date-time
+      endDate:
+        type: string
+        format: date-time
+      drawer:
+        type: integer
