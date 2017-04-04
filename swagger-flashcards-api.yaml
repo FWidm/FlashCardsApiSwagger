@@ -19,12 +19,6 @@ paths:
       operationId: getHeartbeat
       tags:
         - util
-      parameters:
-          - name: Authorization
-            in: header
-            required: true
-            description: Requires authentication via header "Authorization":"Bearer {{token}}"
-            type: string
       responses:
         "200":
           description: "Current Date"
